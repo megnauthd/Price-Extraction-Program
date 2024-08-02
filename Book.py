@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-import csv
+import pandas as pd
 
 # URL of the book page to scrape
 book_url = 'http://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html'
@@ -21,21 +21,36 @@ category = soup.find('ul', class_='breadcrumb').find_all('li')[2].text.strip()
 review_rating = soup.find('p', class_='star-rating')['class'][1]
 image_url = soup.find('img')['src'].replace('../../', 'http://books.toscrape.com/')
 
-# Define the CSV file headers
-headers = [
-    'product_page_url', 'universal_product_code (upc)', 'book_title',
-    'price_including_tax', 'price_excluding_tax', 'quantity_available',
-    'product_description', 'category', 'review_rating', 'image_url'
-]
+# Print the extracted information for debugging
+print(f'product_page_url: {product_page_url}')
+print(f'universal_product_code (upc): {upc}')
+print(f'book_title: {book_title}')
+print(f'price_including_tax: {price_including_tax}')
+print(f'price_excluding_tax: {price_excluding_tax}')
+print(f'quantity_available: {quantity_available}')
+print(f'product_description: {product_description}')
+print(f'category: {category}')
+print(f'review_rating: {review_rating}')
+print(f'image_url: {image_url}')
 
-# Write the data to a CSV file
-with open('book_info.csv', 'w', newline='', encoding='utf-8') as file:
-    writer = csv.writer(file)
-    writer.writerow(headers)
-    writer.writerow([
-        product_page_url, upc, book_title, price_including_tax,
-        price_excluding_tax, quantity_available, product_description,
-        category, review_rating, image_url
-    ])
+# Create a dictionary with the extracted data
+data = {
+    'product_page_url': [product_page_url],
+    'universal_product_code (upc)': [upc],
+    'book_title': [book_title],
+    'price_including_tax': [price_including_tax],
+    'price_excluding_tax': [price_excluding_tax],
+    'quantity_available': [quantity_available],
+    'product_description': [product_description],
+    'category': [category],
+    'review_rating': [review_rating],
+    'image_url': [image_url]
+}
+
+# Convert the dictionary to a pandas DataFrame
+df = pd.DataFrame(data)
+
+# Write the DataFrame to a CSV file
+df.to_csv('book_info.csv', index=False)
 
 print('Data has been written to book_info.csv')
