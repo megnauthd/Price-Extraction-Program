@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import csv
+import os
 
 # Function to extract book information
 def extract_book_info(book_url):
@@ -51,24 +52,47 @@ def get_book_urls(category_url):
 
     return book_urls
 
-# Category URL (Replace this URL with any category URL you choose)
-category_url = 'http://books.toscrape.com/catalogue/category/books/poetry_23/index.html'
+# Function to get all category URLs
+def get_category_urls(home_url):
+    response = requests.get(home_url)
+    soup = BeautifulSoup(response.content, 'html.parser')
 
-# Get all book URLs in the chosen category
-book_urls = get_book_urls(category_url)
+    # Find all category links
+    categories = soup.find('ul', class_='nav nav-list').find('ul').find_all('a')
+    category_urls = ['http://books.toscrape.com/' + category['href'] for category in categories]
+    
+    return category_urls
 
-# List to hold all extracted data
-all_books_data = []
+# Main script to extract data for all categories
+home_url = 'http://books.toscrape.com/index.html'
+category_urls = get_category_urls(home_url)
 
-# Extract data for each book in the category
-for book_url in book_urls:
-    book_data = extract_book_info(book_url)
-    all_books_data.append(book_data)
+# Create a directory to store the CSV files
+os.makedirs('book_data', exist_ok=True)
 
-# Write the data to a CSV file
-with open('category_books_info.csv', 'w', newline='') as file:
-    writer = csv.DictWriter(file, fieldnames=all_books_data[0].keys())
-    writer.writeheader()
-    writer.writerows(all_books_data)
+for category_url in category_urls:
+    # Get the category name for file naming
+    category_name = category_url.split('/')[-2]
+    
+    print(f'Extracting data for category: {category_name}')
 
-print(f'Data for category has been written to category_books_info.csv')
+    # Get all book URLs in the current category
+    book_urls = get_book_urls(category_url)
+
+    # List to hold all extracted data for this category
+    all_books_data = []
+
+    # Extract data for each book in the category
+    for book_url in book_urls:
+        book_data = extract_book_info(book_url)
+        all_books_data.append(book_data)
+
+    # Write the data to a CSV file for the current category
+    with open(f'book_data/{category_name}_books_info.csv', 'w', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=all_books_data[0].keys())
+        writer.writeheader()
+        writer.writerows(all_books_data)
+
+    print(f'Data for category "{category_name}" has been written to book_data/{category_name}_books_info.csv')
+
+print('Data extraction for all categories is complete.')
