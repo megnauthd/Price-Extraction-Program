@@ -2,6 +2,8 @@ import requests
 from bs4 import BeautifulSoup
 import csv
 import os
+import time
+from datetime import datetime
 
 # Function to extract book information
 def extract_book_info(book_url):
@@ -63,36 +65,76 @@ def get_category_urls(home_url):
     
     return category_urls
 
-# Main script to extract data for all categories
-home_url = 'http://books.toscrape.com/index.html'
-category_urls = get_category_urls(home_url)
+# Function to check for price changes
+def check_price_changes(old_data, new_data):
+    changes = []
+    for old, new in zip(old_data, new_data):
+        if old['price_including_tax'] != new['price_including_tax'] or old['quantity_available'] != new['quantity_available']:
+            changes.append({
+                'book_title': new['book_title'],
+                'old_price': old['price_including_tax'],
+                'new_price': new['price_including_tax'],
+                'old_quantity': old['quantity_available'],
+                'new_quantity': new['quantity_available'],
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
+    return changes
 
-# Create a directory to store the CSV files
-os.makedirs('book_data', exist_ok=True)
-
-for category_url in category_urls:
-    # Get the category name for file naming
-    category_name = category_url.split('/')[-2]
+# Function to load previous data
+def load_previous_data(filepath):
+    if not os.path.exists(filepath):
+        return []
     
-    print(f'Extracting data for category: {category_name}')
+    with open(filepath, 'r', newline='') as file:
+        reader = csv.DictReader(file)
+        return list(reader)
 
-    # Get all book URLs in the current category
-    book_urls = get_book_urls(category_url)
-
-    # List to hold all extracted data for this category
-    all_books_data = []
-
-    # Extract data for each book in the category
-    for book_url in book_urls:
-        book_data = extract_book_info(book_url)
-        all_books_data.append(book_data)
-
-    # Write the data to a CSV file for the current category
-    with open(f'book_data/{category_name}_books_info.csv', 'w', newline='') as file:
-        writer = csv.DictWriter(file, fieldnames=all_books_data[0].keys())
+# Function to save data
+def save_data(filepath, data):
+    with open(filepath, 'w', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=data[0].keys())
         writer.writeheader()
-        writer.writerows(all_books_data)
+        writer.writerows(data)
 
-    print(f'Data for category "{category_name}" has been written to book_data/{category_name}_books_info.csv')
+# Main script to monitor all categories
+def monitor_books():
+    home_url = 'http://books.toscrape.com/index.html'
+    category_urls = get_category_urls(home_url)
 
-print('Data extraction for all categories is complete.')
+    # Create a directory to store the CSV files
+    os.makedirs('book_data', exist_ok=True)
+    os.makedirs('price_logs', exist_ok=True)
+
+    for category_url in category_urls:
+        # Get the category name for file naming
+        category_name = category_url.split('/')[-2]
+        
+        print(f'Extracting data for category: {category_name}')
+
+        # Get all book URLs in the current category
+        book_urls = get_book_urls(category_url)
+
+        # Extract data for each book in the category
+        all_books_data = [extract_book_info(book_url) for book_url in book_urls]
+
+        # Load previous data
+        previous_data_file = f'book_data/{category_name}_books_info.csv'
+        previous_data = load_previous_data(previous_data_file)
+
+        # Check for price changes if there's previous data
+        if previous_data:
+            changes = check_price_changes(previous_data, all_books_data)
+            if changes:
+                log_file = f'price_logs/{category_name}_price_changes.csv'
+                save_data(log_file, changes)
+                print(f'Price changes detected and logged in {log_file}')
+
+        # Save the current data
+        save_data(previous_data_file, all_books_data)
+        print(f'Data for category "{category_name}" has been updated.')
+
+    print('Monitoring cycle complete.')
+
+# Run the monitoring script
+monitor_books()
+
