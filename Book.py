@@ -1,3 +1,4 @@
+import os
 import requests
 from bs4 import BeautifulSoup
 import csv
@@ -39,6 +40,26 @@ def get_book_urls(category_url):
     
     return book_urls
 
+def download_image(image_url, category_name, book_title):
+    # Create a directory for the category if it doesn't exist
+    image_dir = f'images/{category_name}'
+    os.makedirs(image_dir, exist_ok=True)
+
+    # Sanitize the book title to create a valid file name
+    sanitized_title = "".join(x for x in book_title if (x.isalnum() or x in "._- ")).strip()
+    image_filename = f"{sanitized_title}.jpg"
+
+    # Full path to save the image
+    image_path = os.path.join(image_dir, image_filename)
+
+    try:
+        image_data = requests.get(image_url).content
+        with open(image_path, 'wb') as image_file:
+            image_file.write(image_data)
+        logging.info(f"Downloaded image for '{book_title}' to '{image_path}'")
+    except Exception as e:
+        logging.error(f"Failed to download image from {image_url}: {e}")
+
 def extract_book_info(book_url):
     logging.info(f"Fetching {book_url}")
     try:
@@ -59,7 +80,7 @@ def extract_book_info(book_url):
     quantity_available = soup.find('th', string='Availability').find_next_sibling('td').text.strip()
 
     product_description_tag = soup.find('div', id='product_description')
-    if product_description_tag:
+    if (product_description_tag and product_description_tag.find_next('p')):
         product_description = product_description_tag.find_next('p').text
     else:
         product_description = 'No description available'
@@ -67,6 +88,9 @@ def extract_book_info(book_url):
     category = soup.find('ul', class_='breadcrumb').find_all('li')[2].text.strip()
     review_rating = soup.find('p', class_='star-rating')['class'][1]
     image_url = soup.find('img')['src'].replace('../../', 'http://books.toscrape.com/')
+
+    # Download the book's image
+    download_image(image_url, category, book_title)
 
     return {
         'product_page_url': product_page_url,
