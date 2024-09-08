@@ -15,7 +15,7 @@ def get_category_urls(home_url):
     soup = BeautifulSoup(response.content, 'html.parser')
     
     category_links = soup.find('div', class_='side_categories').find_all('a')
-    category_urls = [base_url + '/' + link['href'] for link in category_links if link['href'] != '../']
+    category_urls = [base_url + '/' + link['href'].strip() for link in category_links if link['href'] != '../']
     
     return category_urls
 
@@ -28,13 +28,21 @@ def get_book_urls(category_url):
         books = soup.find_all('h3')
         for book in books:
             book_page = book.find('a')['href']
-            book_urls.append(base_url + '/catalogue/' + book_page)
+            # Ensure the URL is well-formed, handling relative URLs
+            if 'catalogue' not in book_page:
+                # Remove leading '../' or './' and add 'catalogue' only if not present
+                book_page = book_page.lstrip('./').lstrip('../')
+                book_page = '/catalogue/' + book_page
+            book_urls.append(base_url + book_page)
         
         # Pagination
         next_button = soup.find('li', class_='next')
         if next_button:
             next_page_url = next_button.find('a')['href']
-            category_url = base_url + '/catalogue/category/books/' + next_page_url
+            # Ensure the pagination URL contains /catalogue/category/books/
+            if '/catalogue/' not in next_page_url:
+                next_page_url = '/catalogue/category/books/' + next_page_url.lstrip('./').lstrip('../')
+            category_url = base_url + next_page_url
         else:
             break
     
@@ -80,7 +88,7 @@ def extract_book_info(book_url):
     quantity_available = soup.find('th', string='Availability').find_next_sibling('td').text.strip()
 
     product_description_tag = soup.find('div', id='product_description')
-    if (product_description_tag and product_description_tag.find_next('p')):
+    if product_description_tag:
         product_description = product_description_tag.find_next('p').text
     else:
         product_description = 'No description available'
