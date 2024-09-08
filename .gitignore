@@ -1,0 +1,15 @@
+# Ignore the virtual environment
+venv/
+env/
+
+# Ignore system files
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore extracted data and images
+data/
+images/
+
+# Ignore unnecessary system files (MacOS-specific)
+.DS_Store
