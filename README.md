@@ -18,7 +18,7 @@ Setup Instructions
 First, clone the repository to your local machine:
 
 bash
-git clone https://github.com/your-username/book-price-monitoring.git
+git clone https://github.com/megnauthd/Price-Extraction-Program.git
 cd book-price-monitoring
 2. Set Up the Virtual Environment
 You can optionally use a virtual environment to avoid conflicts between dependencies. To create and activate a virtual environment, run the following commands:
